@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <meta name="theme-color" content="#101010">
+
+  <title>Partite</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: #101010;
+      font-family: Arial, sans-serif;
+    }
+
+    main {
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    #partite {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .squadra {
+      flex: 1 1 140px;
+      width: 160px;
+      max-width: 175px;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      border-radius: 24px;
+      background: #ffffff;
+      box-shadow: 0 8px 25px rgb(0 0 0 / 35%);
+      text-decoration: none;
+      cursor: pointer;
+      transition:
+        transform 0.15s ease,
+        opacity 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .squadra:hover {
+      transform: translateY(-4px);
+    }
+
+    .squadra:active {
+      transform: scale(0.93);
+    }
+
+    .squadra img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-width: 125px;
+      max-height: 125px;
+      object-fit: contain;
+    }
+
+    .squadra.disattivata {
+      opacity: 0.3;
+      filter: grayscale(1);
+      pointer-events: none;
+      box-shadow: none;
+    }
+
+    #stato {
+      margin-top: 22px;
+      color: #ffffff;
+      text-align: center;
+    }
+
+    #stato:empty {
+      display: none;
+    }
+
+    @media (max-width: 500px) {
+      #partite {
+        gap: 14px;
+      }
+
+      .squadra {
+        flex-basis: 125px;
+        max-width: 145px;
+        padding: 17px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <section
+      id="partite"
+      aria-label="Partite disponibili"
+    ></section>
+
+    <p id="stato">Caricamento…</p>
+  </main>
+
+  <script>
+    /*
+      Inserisci qui l'indirizzo Apps Script
+      che termina con /exec.
+    */
+    const URL_APPS_SCRIPT =
+      "https://script.google.com/macros/s/AKfycbzOuH1mn7d3BultR6b5eLYgl_gcoYzLdNYxVwIabKiA0bqLFwBLx5DgCI070lEYTx7w/exec";
+
+    /*
+      I loghi vengono caricati dalla repository GitHub.
+    */
+    const SQUADRE = [
+      {
+        nome: "INTER",
+        logo: "inter.png"
+      },
+      {
+        nome: "MILAN",
+        logo: "milan.png"
+      },
+      {
+        nome: "JUVE",
+        logo: "juve.png"
+      },
+      {
+        nome: "ROMA",
+        logo: "roma.png"
+      },
+      {
+        nome: "COMO",
+        logo: "como.png"
+      }
+    ];
+
+    const contenitore =
+      document.getElementById("partite");
+
+    const stato =
+      document.getElementById("stato");
+
+    let rispostaRicevuta = false;
+
+    function normalizzaSquadra(nome) {
+      const squadra = String(nome || "")
+        .trim()
+        .toUpperCase();
+
+      return squadra === "JUVENTUS"
+        ? "JUVE"
+        : squadra;
+    }
+
+    function linkDaznValido(link) {
+      try {
+        const url = new URL(link);
+
+        return (
+          url.protocol === "https:" &&
+          (
+            url.hostname === "dazn.com" ||
+            url.hostname.endsWith(".dazn.com")
+          )
+        );
+      } catch {
+        return false;
+      }
+    }
+
+    function creaLinkDazn(link) {
+      const url = new URL(link);
+
+      if (/Android/i.test(navigator.userAgent)) {
+        return (
+          `intent://${url.host}${url.pathname}` +
+          `${url.search}${url.hash}` +
+          `#Intent;scheme=https;package=com.dazn;` +
+          `S.browser_fallback_url=` +
+          `${encodeURIComponent(url.href)};end`
+        );
+      }
+
+      return url.href;
+    }
+
+    function mostraSquadre(datiPartite) {
+      const collegamenti = new Map();
+
+      datiPartite.forEach(partita => {
+        collegamenti.set(
+          normalizzaSquadra(partita.squadra),
+          partita.link
+        );
+      });
+
+      contenitore.innerHTML = "";
+
+      SQUADRE.forEach(squadra => {
+        const link = collegamenti.get(squadra.nome);
+        const elemento = document.createElement("a");
+
+        elemento.className = "squadra";
+
+        const immagine = document.createElement("img");
+
+        immagine.src = squadra.logo;
+        immagine.alt = squadra.nome;
+        immagine.draggable = false;
+
+        elemento.appendChild(immagine);
+
+        if (linkDaznValido(link)) {
+          elemento.href = creaLinkDazn(link);
+          elemento.title =
+            `Apri la partita del ${squadra.nome}`;
+
+          elemento.setAttribute(
+            "aria-label",
+            `Apri la partita del ${squadra.nome}`
+          );
+        } else {
+          elemento.classList.add("disattivata");
+          elemento.title = "Link non disponibile";
+
+          elemento.setAttribute(
+            "aria-disabled",
+            "true"
+          );
+        }
+
+        contenitore.appendChild(elemento);
+      });
+    }
+
+    window.riceviPartite = function (risposta) {
+      rispostaRicevuta = true;
+
+      if (!risposta?.successo) {
+        stato.textContent =
+          risposta?.errore ||
+          "Errore nella lettura del foglio.";
+
+        return;
+      }
+
+      mostraSquadre(risposta.partite);
+      stato.textContent = "";
+    };
+
+    function caricaPartite() {
+      if (
+        !URL_APPS_SCRIPT.startsWith("https://") ||
+        !URL_APPS_SCRIPT.endsWith("/exec")
+      ) {
+        stato.textContent =
+          "Inserisci l'indirizzo /exec di Apps Script.";
+
+        return;
+      }
+
+      const script =
+        document.createElement("script");
+
+      script.src =
+        `${URL_APPS_SCRIPT}` +
+        `?callback=riceviPartite` +
+        `&aggiornamento=${Date.now()}`;
+
+      script.onerror = function () {
+        stato.textContent =
+          "Impossibile contattare Apps Script.";
+      };
+
+      document.head.appendChild(script);
+
+      setTimeout(function () {
+        if (!rispostaRicevuta) {
+          stato.textContent =
+            "Apps Script non ha risposto.";
+        }
+      }, 12000);
+    }
+
+    caricaPartite();
+  </script>
+</body>
+</html>
