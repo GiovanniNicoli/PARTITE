@@ -67,6 +67,11 @@
       transform: translateY(-4px);
     }
 
+    .squadra:focus-visible {
+      outline: 5px solid #ffdc00;
+      outline-offset: 5px;
+    }
+
     .squadra:active {
       transform: scale(0.93);
     }
@@ -118,7 +123,7 @@
       aria-label="Partite disponibili"
     ></section>
 
-    <p id="stato">Caricamento…</p>
+    <p id="stato" role="status" aria-live="polite">Caricamento…</p>
   </main>
 
   <script>
@@ -189,22 +194,12 @@
       }
     }
 
-    function creaLinkDazn(link) {
-      const url = new URL(link);
-
-      if (/Android/i.test(navigator.userAgent)) {
-        return (
-          `intent://${url.host}${url.pathname}` +
-          `${url.search}${url.hash}` +
-          `#Intent;scheme=https;package=com.dazn;` +
-          `S.browser_fallback_url=` +
-          `${encodeURIComponent(url.href)};end`
-        );
-      }
-
-      return url.href;
+    // Aprire questa pagina nel blocco Dialog web di Automate.
+    // Il risultato contiene il link HTTPS originale, non un Android intent.
+    function creaLinkAutomate(link) {
+      return "http://localhost/ok?url=" +
+        encodeURIComponent(new URL(link).href);
     }
-
     function mostraSquadre(datiPartite) {
       const collegamenti = new Map();
 
@@ -232,7 +227,7 @@
         elemento.appendChild(immagine);
 
         if (linkDaznValido(link)) {
-          elemento.href = creaLinkDazn(link);
+          elemento.href = creaLinkAutomate(link);
           elemento.title =
             `Apri la partita del ${squadra.nome}`;
 
@@ -257,7 +252,7 @@
     window.riceviPartite = function (risposta) {
       rispostaRicevuta = true;
 
-      if (!risposta?.successo) {
+      if (!risposta?.successo || !Array.isArray(risposta.partite)) {
         stato.textContent =
           risposta?.errore ||
           "Errore nella lettura del foglio.";
