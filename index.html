@@ -158,6 +158,9 @@
         nome: "COMO",
         logo: "como.png"
       }
+      , { nome: "VICENZA", logo: "vicenza.png" }
+      , { nome: "LAZIO", logo: "lazio.png" }
+      , { nome: "EUROSPORT", logo: "eurosport.png" }
     ];
 
     const contenitore =
@@ -224,7 +227,16 @@
         immagine.alt = squadra.nome;
         immagine.draggable = false;
 
+        const nomeAlternativo = document.createElement("span");
+        nomeAlternativo.textContent = squadra.nome;
+        nomeAlternativo.hidden = true;
+        nomeAlternativo.style.cssText = "color:#101010;font-size:22px;font-weight:bold;text-align:center;overflow-wrap:anywhere;max-width:100%";
+        immagine.addEventListener("error", () => {
+          immagine.style.display = "none";
+          nomeAlternativo.hidden = false;
+        });
         elemento.appendChild(immagine);
+        elemento.appendChild(nomeAlternativo);
 
         if (linkDaznValido(link)) {
           elemento.href = creaLinkAutomate(link);
@@ -302,3 +314,4 @@
   </script>
 </body>
 </html>
+
